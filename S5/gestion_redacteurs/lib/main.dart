@@ -1,44 +1,63 @@
 import 'package:flutter/material.dart';
-import 'models/redacteur.dart';
-import 'services/db_helper.dart';
+import 'Modele/redacteur.dart';
+import 'services/database_manager.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const MonApplication());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MonApplication extends StatelessWidget {
+  const MonApplication({super.key});
 
   @override
   Widget build(BuildContext context) {
+    const magenta = Color(0xFFD81B60);
+
     return MaterialApp(
       title: 'Gestion des Rédacteurs',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFD81B60),
-          primary: const Color(0xFFD81B60),
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: magenta, primary: magenta),
         useMaterial3: true,
       ),
-      home: const RedacteurHomePage(),
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'Gestion des rédacteurs',
+            style: TextStyle(color: Colors.white),
+          ),
+          centerTitle: false,
+          backgroundColor: magenta,
+          leading: IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () {},
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.search, color: Colors.white),
+              onPressed: () {},
+            ),
+          ],
+        ),
+        body: const RedacteursInterface(),
+      ),
     );
   }
 }
 
-class RedacteurHomePage extends StatefulWidget {
-  const RedacteurHomePage({super.key});
+class RedacteursInterface extends StatefulWidget {
+  const RedacteursInterface({super.key});
 
   @override
-  State<RedacteurHomePage> createState() => _RedacteurHomePageState();
+  State<RedacteursInterface> createState() => _RedacteursInterfaceState();
 }
 
-class _RedacteurHomePageState extends State<RedacteurHomePage> {
+class _RedacteursInterfaceState extends State<RedacteursInterface> {
   final _formKey = GlobalKey<FormState>();
   final _nomController = TextEditingController();
   final _prenomController = TextEditingController();
   final _emailController = TextEditingController();
-  final DBHelper _dbHelper = DBHelper();
+  final DatabaseManager _dbManager = DatabaseManager();
 
   late Future<List<Redacteur>> _redacteurs;
 
@@ -58,20 +77,19 @@ class _RedacteurHomePageState extends State<RedacteurHomePage> {
 
   void _refreshRedacteurs() {
     setState(() {
-      _redacteurs = _dbHelper.getAllRedacteurs();
+      _redacteurs = _dbManager.getAllRedacteurs();
     });
   }
 
   void _addRedacteur() async {
     if (_formKey.currentState!.validate()) {
-      final r = Redacteur(
-        nom: _nomController.text,
-        prenom: _prenomController.text,
-        email: _emailController.text,
-        age: 0, // Age not in the form screenshots but required by model
+      final r = Redacteur.withoutId(
+        _nomController.text,
+        _prenomController.text,
+        _emailController.text,
       );
 
-      await _dbHelper.insertRedacteur(r);
+      await _dbManager.insertRedacteur(r);
       _nomController.clear();
       _prenomController.clear();
       _emailController.clear();
@@ -123,13 +141,12 @@ class _RedacteurHomePageState extends State<RedacteurHomePage> {
 
     if (result == true) {
       final updated = Redacteur(
-        id: redacteur.id,
-        nom: nomController.text,
-        prenom: prenomController.text,
-        email: emailController.text,
-        age: redacteur.age,
+        redacteur.id,
+        nomController.text,
+        prenomController.text,
+        emailController.text,
       );
-      await _dbHelper.updateRedacteur(updated);
+      await _dbManager.updateRedacteur(updated);
       _refreshRedacteurs();
     }
   }
@@ -157,139 +174,120 @@ class _RedacteurHomePageState extends State<RedacteurHomePage> {
     );
 
     if (confirmed == true) {
-      await _dbHelper.deleteRedacteur(id);
+      await _dbManager.deleteRedacteur(id);
       _refreshRedacteurs();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final magenta = const Color(0xFFD81B60);
+    const magenta = Color(0xFFD81B60);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Gestion des rédacteurs',
-          style: TextStyle(color: Colors.white),
-        ),
-        centerTitle: false,
-        backgroundColor: magenta,
-        leading: const Icon(Icons.menu, color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Input Form Section
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: _nomController,
-                    decoration: const InputDecoration(labelText: 'Nom'),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Champ requis' : null,
-                  ),
-                  TextFormField(
-                    controller: _prenomController,
-                    decoration: const InputDecoration(labelText: 'Prénom'),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Champ requis' : null,
-                  ),
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Champ requis' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      onPressed: _addRedacteur,
-                      icon: const Icon(Icons.add, color: Colors.white),
-                      label: const Text(
-                        'Ajouter un Rédacteur',
-                        style: TextStyle(color: Colors.white, fontSize: 16),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: magenta,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5),
-                        ),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _nomController,
+                  decoration: const InputDecoration(labelText: 'Nom'),
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Champ requis' : null,
+                ),
+                TextFormField(
+                  controller: _prenomController,
+                  decoration: const InputDecoration(labelText: 'Prénom'),
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Champ requis' : null,
+                ),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Champ requis' : null,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: _addRedacteur,
+                    icon: const Icon(Icons.add, color: Colors.white),
+                    label: const Text(
+                      'Ajouter un Rédacteur',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: magenta,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          // List Section
-          Expanded(
-            child: Container(
-              color:
-                  Colors.grey[200], // Light gray background for the list area
-              child: FutureBuilder<List<Redacteur>>(
-                future: _redacteurs,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return Center(child: Text('Erreur: ${snapshot.error}'));
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text('Aucun rédacteur trouvé.'));
-                  }
+        ),
 
-                  final redacteurs = snapshot.data!;
-                  return ListView.builder(
-                    itemCount: redacteurs.length,
-                    itemBuilder: (context, index) {
-                      final r = redacteurs[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
+        Expanded(
+          child: Container(
+            color: Colors.grey[200],
+            child: FutureBuilder<List<Redacteur>>(
+              future: _redacteurs,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Erreur: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('Aucun rédacteur trouvé.'));
+                }
+
+                final redacteurs = snapshot.data!;
+                return ListView.builder(
+                  itemCount: redacteurs.length,
+                  itemBuilder: (context, index) {
+                    final r = redacteurs[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      child: ListTile(
+                        title: Text(
+                          '${r.prenom} ${r.nom}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        child: ListTile(
-                          title: Text(
-                            '${r.prenom} ${r.nom}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(
-                            r.email,
-                            style: const TextStyle(color: Colors.grey),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.edit, color: magenta),
-                                onPressed: () => _showEditDialog(r),
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.delete, color: magenta),
-                                onPressed: () => _deleteRedacteur(r.id!),
-                              ),
-                            ],
-                          ),
+                        subtitle: Text(
+                          r.email,
+                          style: const TextStyle(color: Colors.grey),
                         ),
-                      );
-                    },
-                  );
-                },
-              ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: magenta),
+                              onPressed: () => _showEditDialog(r),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: magenta),
+                              onPressed: () => _deleteRedacteur(r.id!),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

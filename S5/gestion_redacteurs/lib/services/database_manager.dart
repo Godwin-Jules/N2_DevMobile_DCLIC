@@ -1,22 +1,22 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import '../models/redacteur.dart';
+import '../Modele/redacteur.dart';
 
-class DBHelper {
-  static final DBHelper _instance = DBHelper._internal();
-  factory DBHelper() => _instance;
-  DBHelper._internal();
+class DatabaseManager {
+  static final DatabaseManager _instance = DatabaseManager._internal();
+  factory DatabaseManager() => _instance;
+  DatabaseManager._internal();
 
   static Database? _database;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB();
+    _database = await initialisation();
     return _database!;
   }
 
-  Future<Database> _initDB() async {
-    String path = join(await getDatabasesPath(), 'redacteurs.db');
+  Future<Database> initialisation() async {
+    String path = join(await getDatabasesPath(), 'redacteurs_v2.db');
     return await openDatabase(
       path,
       version: 1,
@@ -26,17 +26,11 @@ class DBHelper {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nom TEXT,
             prenom TEXT,
-            email TEXT,
-            age INTEGER
+            email TEXT
           )
         ''');
       },
     );
-  }
-
-  Future<int> insertRedacteur(Redacteur redacteur) async {
-    final db = await database;
-    return await db.insert('redacteurs', redacteur.toMap());
   }
 
   Future<List<Redacteur>> getAllRedacteurs() async {
@@ -45,6 +39,11 @@ class DBHelper {
     return List.generate(maps.length, (i) {
       return Redacteur.fromMap(maps[i]);
     });
+  }
+
+  Future<int> insertRedacteur(Redacteur redacteur) async {
+    final db = await database;
+    return await db.insert('redacteurs', redacteur.toMap());
   }
 
   Future<int> updateRedacteur(Redacteur redacteur) async {
@@ -60,18 +59,5 @@ class DBHelper {
   Future<int> deleteRedacteur(int id) async {
     final db = await database;
     return await db.delete('redacteurs', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<Redacteur?> getRedacteurById(int id) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'redacteurs',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    if (maps.isNotEmpty) {
-      return Redacteur.fromMap(maps.first);
-    }
-    return null;
   }
 }
