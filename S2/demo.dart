@@ -73,7 +73,7 @@ void main() {
   print(noms.reversed);
 
   Set dare = {"Python", "Java"};
-  dare.length;
+  print(dare.length);
 
   File mon_fichier = File("path.txt");
   File mon_fichier2 = File("path2.txt");
@@ -86,5 +86,6 @@ void main() {
   var content2 = mon_fichier2.readAsStringSync();
   print(content2);
   var content = mon_fichier.readAsString();
+  // Future<String> content = mon_fichier.readAsString(); // son vrai type
   print(content);
 }
